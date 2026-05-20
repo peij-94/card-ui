@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>蒸汽朋克卡牌战斗</title>
+<style>
+/* ===== RESET & BASE ===== */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'Georgia','SimSun',serif;background:#1a1a2e;color:#e0d5c0;overflow-x:hidden;min-height:100vh;}
+::-webkit-scrollbar{width:6px;}
+::-webkit-scrollbar-track{background:#1a1a2e;}
+::-webkit-scrollbar-thumb{background:#b87333;border-radius:3px;}
+
+/* ===== SCREENS ===== */
+.screen{display:none;width:100%;min-height:100vh;position:relative;}
+.screen.active{display:flex;flex-direction:column;align-items:center;}
+
+/* ===== TITLE SCREEN ===== */
+#title-screen{justify-content:center;background:linear-gradient(180deg,#0d0d1a 0%,#1a1a2e 40%,#2d1f0e 100%);}
+.title-gears{position:absolute;top:0;left:0;width:100%;height:100%;overflow:hidden;pointer-events:none;z-index:0;}
+.gear-bg{position:absolute;border:3px solid rgba(184,115,51,0.15);border-radius:50%;animation:spinGear 20s linear infinite;}
+.gear-bg:nth-child(1){width:200px;height:200px;top:-50px;left:-50px;animation-duration:25s;}
+.gear-bg:nth-child(2){width:300px;height:300px;bottom:-100px;right:-80px;animation-duration:30s;animation-direction:reverse;}
+.gear-bg:nth-child(3){width:150px;height:150px;top:30%;right:10%;animation-duration:18s;}
+.gear-bg:nth-child(4){width:250px;height:250px;bottom:20%;left:5%;animation-duration:22s;animation-direction:reverse;}
+@keyframes spinGear{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.title-content{z-index:1;text-align:center;}
+.title-content h1{font-size:3em;color:#b87333;text-shadow:0 0 20px rgba(184,115,51,0.5),0 2px 4px rgba(0,0,0,0.8);margin-bottom:10px;letter-spacing:4px;}
+.title-content .subtitle{font-size:1.2em;color:#8a7a6a;margin-bottom:40px;letter-spacing:8px;}
+.btn{padding:14px 40px;border:2px solid #b87333;background:linear-gradient(180deg,#3d2b1a,#2a1d0f);color:#e0d5c0;font-size:1.1em;font-family:inherit;cursor:pointer;border-radius:4px;transition:all .3s;letter-spacing:2px;position:relative;overflow:hidden;}
+.btn:hover{background:linear-gradient(180deg,#4d3b2a,#3a2d1f);box-shadow:0 0 15px rgba(184,115,51,0.4);transform:translateY(-2px);}
+.btn:active{transform:translateY(0);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;transform:none;box-shadow:none;}
+.btn-sm{padding:8px 20px;font-size:0.9em;}
+.btn-danger{border-color:#aa3333;background:linear-gradient(180deg,#3d1a1a,#2a0f0f);}
+.btn-danger:hover{background:linear-gradient(180deg,#4d2a2a,#3a1f1f);box-shadow:0 0 15px rgba(170,51,51,0.4);}
+
+/* ===== CHARACTER SELECT ===== */
+#select-screen{justify-content:flex-start;padding:20px;background:linear-gradient(180deg,#0d0d1a 0%,#1a1a2e 40%,#2d1f0e 100%);}
+#select-screen h2{font-size:2em;color:#b87333;margin:20px 0 30px;text-shadow:0 0 10px rgba(184,115,51,0.3);letter-spacing:3px;}
+.char-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:20px;max-width:1200px;margin-bottom:30px;}
+.char-card{width:200px;background:linear-gradient(180deg,#2d2d44,#1e1e30);border:2px solid #3a3a55;border-radius:8px;padding:15px;cursor:pointer;transition:all .3s;text-align:center;position:relative;overflow:hidden;}
+.char-card:hover{border-color:#b87333;transform:translateY(-5px);box-shadow:0 8px 25px rgba(0,0,0,0.5),0 0 15px rgba(184,115,51,0.2);}
+.char-card.selected{border-color:#b87333;box-shadow:0 0 20px rgba(184,115,51,0.4);}
+.char-card .char-icon{width:60px;height:60px;margin:0 auto 10px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.8em;border:2px solid;}
+.char-card .char-name{font-size:1.1em;color:#b87333;margin-bottom:8px;}
+.char-card .char-stats{text-align:left;font-size:0.8em;color:#a09888;line-height:1.6;}
+.char-card .char-skill{margin-top:8px;font-size:0.75em;color:#8a7a6a;border-top:1px solid #3a3a55;padding-top:8px;}
+.char-card .element-fire{border-color:#ff4444;color:#ff4444;}
+.char-card .element-ice{border-color:#44aaff;color:#44aaff;}
+.char-card .element-thunder{border-color:#ffdd44;color:#ffdd44;}
+.char-card .element-water{border-color:#44dddd;color:#44dddd;}
+.char-card .element-void{border-color:#aa44ff;color:#aa44ff;}
+
+/* ===== BATTLE SCREEN ===== */
+#battle-screen{padding:10px;background:#1a1a2e;min-height:100vh;}
+
+/* Top Bar */
+.top-bar{width:100%;max-width:1200px;display:flex;justify-content:space-between;align-items:center;padding:8px 15px;background:linear-gradient(90deg,#1e1e30,#2d2d44,#1e1e30);border:1px solid #3a3a55;border-radius:6px;margin-bottom:10px;flex-wrap:wrap;gap:8px;}
+.stage-info{font-size:1em;color:#b87333;}
+.player-status{display:flex;align-items:center;gap:15px;flex-wrap:wrap;}
+.player-hp-wrap,.player-shield-wrap{display:flex;align-items:center;gap:5px;font-size:0.85em;}
+.bar-outer{width:150px;height:16px;background:#111;border-radius:8px;overflow:hidden;border:1px solid #3a3a55;position:relative;}
+.bar-inner{height:100%;border-radius:8px;transition:width .5s ease;position:relative;}
+.bar-inner.hp{background:linear-gradient(90deg,#22aa22,#44ff44);}
+.bar-inner.shield{background:linear-gradient(90deg,#2266cc,#4488ff);}
+.bar-inner.low{background:linear-gradient(90deg,#aa2222,#ff4444);}
+.bar-text{position:absolute;width:100%;text-align:center;font-size:0.7em;line-height:16px;color:#fff;text-shadow:0 1px 2px #000;z-index:1;}
+.gear-display{display:flex;align-items:center;gap:5px;font-size:1em;color:#b87333;}
+.gear-icon{font-size:1.2em;}
+
+/* Main Battle Area */
+.battle-area{width:100%;max-width:1200px;display:flex;gap:10px;flex:1;min-height:0;}
+.monster-area{flex:1;display:flex;flex-wrap:wrap;gap:10px;align-content:flex-start;padding:10px;background:rgba(30,30,48,0.5);border:1px solid #3a3a55;border-radius:6px;min-height:200px;}
+.monster-card{width:180px;background:linear-gradient(180deg,#2d2d44,#1e1e30);border:2px solid #3a3a55;border-radius:8px;padding:10px;text-align:center;position:relative;transition:all .3s;cursor:default;}
+.monster-card.targetable{cursor:pointer;border-color:#b87333;animation:pulseTarget 1.5s ease-in-out infinite;}
+@keyframes pulseTarget{0%,100%{box-shadow:0 0 5px rgba(184,115,51,0.3);}50%{box-shadow:0 0 15px rgba(184,115,51,0.6);}}
+.monster-card.hit{animation:monsterHit .3s ease;}
+@keyframes monsterHit{0%,100%{filter:brightness(1);}50%{filter:brightness(2) saturate(0);}}
+.monster-card .m-icon{font-size:2em;margin-bottom:5px;}
+.monster-card .m-name{font-size:0.85em;color:#b87333;margin-bottom:5px;}
+.monster-card .m-hp-bar{width:100%;height:10px;background:#111;border-radius:5px;overflow:hidden;margin-bottom:3px;}
+.monster-card .m-hp-fill{height:100%;background:linear-gradient(90deg,#aa2222,#ff4444);border-radius:5px;transition:width .4s ease;}
+.monster-card .m-hp-text{font-size:0.7em;color:#a09888;}
+.monster-card .m-status{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;margin-top:5px;}
+.status-badge{font-size:0.6em;padding:1px 5px;border-radius:3px;color:#fff;}
+.status-badge.buff{background:rgba(68,170,68,0.6);}
+.status-badge.debuff{background:rgba(170,68,68,0.6);}
+.monster-card.dead{opacity:0.3;pointer-events:none;filter:grayscale(1);}
+
+/* Battle Log */
+.battle-log{width:250px;background:linear-gradient(180deg,#1e1e30,#151525);border:1px solid #3a3a55;border-radius:6px;padding:10px;overflow-y:auto;max-height:350px;font-size:0.78em;line-height:1.5;}
+.battle-log .log-entry{padding:3px 0;border-bottom:1px solid rgba(58,58,85,0.3);}
+.log-damage{color:#ff6644;}
+.log-heal{color:#44ff88;}
+.log-shield{color:#4488ff;}
+.log-info{color:#b87333;}
+.log-skill{color:#ffdd44;}
+
+/* Hand Area */
+.hand-area{width:100%;max-width:1200px;margin-top:10px;padding:10px 0;min-height:170px;}
+.hand-label{font-size:0.85em;color:#8a7a6a;margin-bottom:8px;}
+.hand-cards{display:flex;gap:10px;overflow-x:auto;padding:5px 0;justify-content:center;flex-wrap:wrap;}
+
+/* Card Styles */
+.game-card{width:130px;min-height:175px;background:linear-gradient(180deg,#2d2d44,#1e1e30);border:2px solid #3a3a55;border-radius:8px;padding:10px;cursor:pointer;transition:all .3s;position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.game-card:hover{transform:translateY(-10px);box-shadow:0 10px 25px rgba(0,0,0,0.5);}
+.game-card.selected{border-color:#ffdd44;box-shadow:0 0 20px rgba(255,221,68,0.4);transform:translateY(-10px);}
+.game-card.disabled{opacity:0.4;cursor:not-allowed;transform:none !important;box-shadow:none !important;}
+.game-card .card-cost{position:absolute;top:-8px;right:-8px;width:28px;height:28px;background:linear-gradient(135deg,#b87333,#8a5522);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.85em;font-weight:bold;color:#fff;border:2px solid #d4943f;}
+.game-card .card-icon{font-size:1.8em;margin:8px 0 5px;}
+.game-card .card-name{font-size:0.8em;color:#e0d5c0;margin-bottom:3px;}
+.game-card .card-desc{font-size:0.65em;color:#8a7a6a;line-height:1.3;flex:1;}
+.game-card .card-element{font-size:0.6em;margin-top:5px;padding:1px 6px;border-radius:3px;}
+.card-element.fire{background:rgba(255,68,68,0.2);color:#ff4444;}
+.card-element.ice{background:rgba(68,170,255,0.2);color:#44aaff;}
+.card-element.thunder{background:rgba(255,221,68,0.2);color:#ffdd44;}
+.card-element.water{background:rgba(68,221,221,0.2);color:#44dddd;}
+.card-element.void{background:rgba(170,68,255,0.2);color:#aa44ff;}
+.card-element.neutral{background:rgba(184,115,51,0.2);color:#b87333;}
+.card-element.heal{background:rgba(68,255,136,0.2);color:#44ff88;}
+
+/* Action Bar */
+.action-bar{width:100%;max-width:1200px;display:flex;justify-content:flex-end;gap:10px;margin-top:10px;padding:10px 0;flex-wrap:wrap;}
+.skill-btn{position:relative;}
+.skill-btn .cooldown-overlay{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:0.8em;color:#ff6644;}
+
+/* Damage Popup */
+.damage-popup{position:absolute;font-size:1.2em;font-weight:bold;pointer-events:none;z-index:100;animation:popUp .8s ease-out forwards;text-shadow:0 1px 3px #000;}
+@keyframes popUp{0%{opacity:1;transform:translateY(0) scale(1);}100%{opacity:0;transform:translateY(-40px) scale(1.3);}}
+
+/* Card Play Animation */
+.card-playing{animation:cardFly .4s ease-in forwards;}
+@keyframes cardFly{0%{opacity:1;transform:scale(1);}100%{opacity:0;transform:scale(0.3) translateY(-100px);}}
+
+/* Skill Flash */
+.skill-flash{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:200;animation:flashAnim .5s ease-out forwards;}
+@keyframes flashAnim{0%{background:rgba(255,255,255,0.3);}100%{background:rgba(255,255,255,0);}}
+
+/* ===== RESULT SCREENS ===== */
+#victory-screen,#defeat-screen,#clear-screen{justify-content:center;background:linear-gradient(180deg,#0d0d1a 0%,#1a1a2e 40%,#2d1f0e 100%);}
+.result-content{text-align:center;z-index:1;}
+.result-content h2{font-size:2.5em;margin-bottom:15px;letter-spacing:3px;}
+.result-content.victory h2{color:#44ff88;text-shadow:0 0 20px rgba(68,255,136,0.4);}
+.result-content.defeat h2{color:#ff4444;text-shadow:0 0 20px rgba(255,68,68,0.4);}
+.result-content.clear h2{color:#ffdd44;text-shadow:0 0 20px rgba(255,221,68,0.4);}
+.result-content p{font-size:1.1em;color:#a09888;margin-bottom:30px;}
+.result-buttons{display:flex;gap:15px;justify-content:center;flex-wrap:wrap;}
+
+/* Target Selection Overlay */
+.target-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:50;display:none;align-items:center;justify-content:center;}
+.target-overlay.active{display:flex;}
+.target-overlay .target-hint{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3em;color:#ffdd44;text-shadow:0 0 10px rgba(255,221,68,0.5);z-index:51;pointer-events:none;animation:hintPulse 1s ease-in-out infinite;}
+@keyframes hintPulse{0%,100%{opacity:0.7;}50%{opacity:1;}}
+
+/* Combo Display */
+.combo-display{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2em;color:#ffdd44;text-shadow:0 0 20px rgba(255,221,68,0.6);pointer-events:none;z-index:100;animation:comboAnim .8s ease-out forwards;}
+@keyframes comboAnim{0%{opacity:1;transform:translate(-50%,-50%) scale(0.5);}30%{transform:translate(-50%,-50%) scale(1.2);}100%{opacity:0;transform:translate(-50%,-50%) scale(1) translateY(-30px);}}
+
+/* Responsive */
+@media(max-width:768px){
+  .battle-area{flex-direction:column;}
+  .battle-log{width:100%;max-height:150px;}
+  .monster-card{width:140px;}
+  .game-card{width:110px;min-height:150px;}
+  .char-card{width:160px;}
+  .top-bar{font-size:0.85em;}
+  .bar-outer{width:100px;}
+  .title-content h1{font-size:2em;}
+}
+</style>
+</head>
+<body>
+
+<!-- ===== TITLE SCREEN ===== -->
+<div id="title-screen" class="screen active">
+  <div class="title-gears">
+    <div class="gear-bg"></div>
+    <div class="gear-bg"></div>
+    <div class="gear-bg"></div>
+    <div class="gear-bg"></div>
+  </div>
+  <div class="title-content">
+    <h1>蒸汽朋克卡牌战斗</h1>
+    <div class="subtitle">STEAMPUNK CARD BATTLE</div>
+    <button class="btn" onclick="showScreen('select-screen')">开始游戏</button>
+  </div>
+</div>
+
+<!-- ===== CHARACTER SELECT ===== -->
+<div id="select-screen" class="screen">
+  <h2>选择你的角色</h2>
+  <div class="char-grid" id="char-grid"></div>
+  <div style="text-align:center;">
+    <button class="btn" id="start-battle-btn" disabled onclick="startGame()">开始冒险</button>
+  </div>
+</div>
+
+<!-- ===== BATTLE SCREEN ===== -->
+<div id="battle-screen" class="screen">
+  <div class="top-bar">
+    <div class="stage-info" id="stage-info">第1关</div>
+    <div class="player-status">
+      <div class="player-hp-wrap">
+        <span>HP</span>
+        <div class="bar-outer"><div class="bar-inner hp" id="player-hp-bar" style="width:100%"></div><div class="bar-text" id="player-hp-text">100/100</div></div>
+      </div>
+      <div class="player-shield-wrap">
+        <span>护盾</span>
+        <div class="bar-outer"><div class="bar-inner shield" id="player-shield-bar" style="width:0%"></div><div class="bar-text" id="player-shield-text">0</div></div>
+      </div>
+      <div class="gear-display">
+        <span class="gear-icon">&#9881;</span>
+        <span id="gear-count">3</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="battle-area">
+    <div class="monster-area" id="monster-area"></div>
+    <div class="battle-log" id="battle-log"></div>
+  </div>
+
+  <div class="hand-area">
+    <div class="hand-label">手牌 (<span id="hand-count">0</span>/8)</div>
+    <div class="hand-cards" id="hand-cards"></div>
+  </div>
+
+  <div class="action-bar">
+    <button class="btn btn-sm skill-btn" id="skill-btn" onclick="useSkill()" disabled>
+      <span id="skill-name">技能</span>
+      <span class="cooldown-overlay" id="skill-cd" style="display:none;"></span>
+    </button>
+    <button class="btn btn-sm" id="end-turn-btn" onclick="endPlayerTurn()">结束回合</button>
+  </div>
+</div>
+
+<!-- ===== VICTORY SCREEN ===== -->
+<div id="victory-screen" class="screen">
+  <div class="result-content victory">
+    <h2>战斗胜利</h2>
+    <p id="victory-text">你击败了所有敌人！</p>
+    <div class="result-buttons">
+      <button class="btn" id="next-stage-btn" onclick="nextStage()">进入下一关</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== DEFEAT SCREEN ===== -->
+<div id="defeat-screen" class="screen">
+  <div class="result-content defeat">
+    <h2>战斗失败</h2>
+    <p>你的角色倒下了...</p>
+    <div class="result-buttons">
+      <button class="btn btn-danger" onclick="retryStage()">重新挑战</button>
+      <button class="btn" onclick="showScreen('select-screen')">重新选择角色</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== CLEAR SCREEN ===== -->
+<div id="clear-screen" class="screen">
+  <div class="result-content clear">
+    <h2>恭喜通关</h2>
+    <p>你成功击败了泰坦魔像，拯救了蒸汽城！</p>
+    <div class="result-buttons">
+      <button class="btn" onclick="showScreen('select-screen')">再来一次</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TARGET OVERLAY ===== -->
+<div class="target-overlay" id="target-overlay">
+  <div class="target-hint">点击选择目标</div>
+</div>
+
+<script>
+// ============================================================
+//  DATA DEFINITIONS
+// ============================================================
+
+const ELEMENTS = {FIRE:'fire',ICE:'ice',THUNDER:'thunder',WATER:'water',VOID:'void',NEUTRAL:'neutral'};
+const ELEMENT_NAMES = {fire:'火',ice:'冰',thunder:'雷',water:'水',void:'虚空',neutral:'无'};
+const ELEMENT_COLORS = {fire:'#ff4444',ice:'#44aaff',thunder:'#ffdd44',water:'#44dddd',void:'#aa44ff',neutral:'#b87333'};
+
+// Element advantage: key beats value
+const ELEMENT_ADVANTAGE = {fire:'ice',ice:'thunder',thunder:'water',water:'fire'};
+
+const CHARACTERS = [
+  {
+    id:'pyromancer', name:'炎术师', icon:'🔥',
+    hp:85, atk:22, def:8, element:'fire',
+    skillName:'烈焰风暴', skillDesc:'全体25伤害+灼烧', skillCd:3,
+    cards:[
+      {name:'火焰弹',cost:1,type:'attack',damage:18,element:'fire',desc:'18火属性伤害',icon:'🔥'},
+      {name:'烈焰冲击',cost:2,type:'attack',damage:28,element:'fire',desc:'28火属性伤害',icon:'💥'},
+      {name:'火焰护甲',cost:1,type:'shield',value:20,element:'fire',desc:'获得20护盾',icon:'🛡️'},
+      {name:'燃烬之力',cost:1,type:'buff',buff:'strengthen',desc:'伤害+25% 2回合',icon:'⬆️'},
+      {name:'灰烬之息',cost:2,type:'debuff',debuff:'weakness',element:'fire',desc:'敌人伤害-25% 2回合',icon:'⬇️'},
+      {name:'火焰新星',cost:2,type:'skill',damage:15,element:'fire',desc:'全体15火伤害',icon:'✨'},
+      {name:'爆裂火焰',cost:3,type:'burst',damage:40,element:'fire',desc:'40火属性爆发伤害',icon:'☄️'},
+      {name:'灼热治愈',cost:1,type:'heal',value:20,desc:'回复20HP',icon:'💚'},
+    ]
+  },
+  {
+    id:'frostspeaker', name:'霜语者', icon:'❄️',
+    hp:95, atk:16, def:10, element:'ice',
+    skillName:'暴风雪', skillDesc:'全体20伤害+50%冻结', skillCd:3,
+    cards:[
+      {name:'冰霜箭',cost:1,type:'attack',damage:15,element:'ice',desc:'15冰属性伤害',icon:'🧊'},
+      {name:'极寒之矛',cost:2,type:'attack',damage:25,element:'ice',desc:'25冰属性伤害',icon:'🔱'},
+      {name:'冰霜屏障',cost:1,type:'shield',value:22,element:'ice',desc:'获得22护盾',icon:'🛡️'},
+      {name:'寒冰之心',cost:1,type:'buff',buff:'dodge',desc:'30%闪避 2回合',icon:'💨'},
+      {name:'冰冻诅咒',cost:2,type:'debuff',debuff:'freeze',element:'ice',desc:'冻结敌人1回合',icon:'❄️'},
+      {name:'霜冻新星',cost:2,type:'skill',damage:12,element:'ice',desc:'全体12冰伤害',icon:'✨'},
+      {name:'绝对零度',cost:3,type:'burst',damage:35,element:'ice',desc:'35冰属性爆发伤害',icon:'☄️'},
+      {name:'冰泉涌流',cost:1,type:'heal',value:22,desc:'回复22HP',icon:'💚'},
+    ]
+  },
+  {
+    id:'thundercaller', name:'雷鸣使', icon:'⚡',
+    hp:80, atk:24, def:7, element:'thunder',
+    skillName:'电磁脉冲', skillDesc:'全体30伤害+麻痹1回合', skillCd:3,
+    cards:[
+      {name:'雷电击',cost:1,type:'attack',damage:20,element:'thunder',desc:'20雷属性伤害',icon:'⚡'},
+      {name:'雷霆万钧',cost:2,type:'attack',damage:32,element:'thunder',desc:'32雷属性伤害',icon:'🌩️'},
+      {name:'雷电护盾',cost:1,type:'shield',value:18,element:'thunder',desc:'获得18护盾',icon:'🛡️'},
+      {name:'迅雷之力',cost:1,type:'buff',buff:'crit',desc:'暴击+50% 2回合',icon:'🎯'},
+      {name:'麻痹电击',cost:2,type:'debuff',debuff:'paralyze',element:'thunder',desc:'麻痹敌人1回合',icon:'⚡'},
+      {name:'闪电链',cost:2,type:'skill',damage:14,element:'thunder',desc:'全体14雷伤害',icon:'✨'},
+      {name:'万雷轰顶',cost:3,type:'burst',damage:42,element:'thunder',desc:'42雷属性爆发伤害',icon:'☄️'},
+      {name:'雷电恢复',cost:1,type:'heal',value:18,desc:'回复18HP',icon:'💚'},
+    ]
+  },
+  {
+    id:'tideguard', name:'潮汐守卫', icon:'🌊',
+    hp:130, atk:14, def:14, element:'water',
+    skillName:'生命之海', skillDesc:'回复50%HP+40护盾', skillCd:3,
+    cards:[
+      {name:'水刃',cost:1,type:'attack',damage:14,element:'water',desc:'14水属性伤害',icon:'💧'},
+      {name:'巨浪冲击',cost:2,type:'attack',damage:22,element:'water',desc:'22水属性伤害',icon:'🌊'},
+      {name:'潮汐壁垒',cost:1,type:'shield',value:28,element:'water',desc:'获得28护盾',icon:'🛡️'},
+      {name:'海潮之力',cost:1,type:'buff',buff:'haste',desc:'攻速+30% 2回合',icon:'⬆️'},
+      {name:'深渊之缚',cost:2,type:'debuff',debuff:'slow',element:'water',desc:'减速敌人2回合',icon:'⬇️'},
+      {name:'海啸',cost:2,type:'skill',damage:13,element:'water',desc:'全体13水伤害',icon:'✨'},
+      {name:'怒涛之击',cost:3,type:'burst',damage:30,element:'water',desc:'30水属性爆发伤害',icon:'☄️'},
+      {name:'潮汐治愈',cost:1,type:'heal',value:25,desc:'回复25HP',icon:'💚'},
+    ]
+  },
+  {
+    id:'voidprophet', name:'虚空先知', icon:'🌀',
+    hp:75, atk:20, def:6, element:'void',
+    skillName:'虚空领域', skillDesc:'全体腐蚀3回合', skillCd:3,
+    cards:[
+      {name:'虚空裂隙',cost:1,type:'attack',damage:18,element:'void',desc:'18虚空伤害',icon:'🌀'},
+      {name:'虚空吞噬',cost:2,type:'attack',damage:30,element:'void',desc:'30虚空伤害',icon:'🕳️'},
+      {name:'虚空屏障',cost:1,type:'shield',value:16,element:'void',desc:'获得16护盾',icon:'🛡️'},
+      {name:'虚空之力',cost:1,type:'buff',buff:'strengthen',desc:'伤害+25% 2回合',icon:'⬆️'},
+      {name:'虚空侵蚀',cost:2,type:'debuff',debuff:'corrode',element:'void',desc:'腐蚀敌人3回合(护甲-15/回合)',icon:'💀'},
+      {name:'虚空爆发',cost:2,type:'skill',damage:16,element:'void',desc:'全体16虚空伤害',icon:'✨'},
+      {name:'湮灭',cost:3,type:'burst',damage:45,element:'void',desc:'45虚空爆发伤害',icon:'☄️'},
+      {name:'虚空汲取',cost:1,type:'heal',value:18,desc:'回复18HP',icon:'💚'},
+    ]
+  }
+];
+
+const COMMON_CARDS = [
+  {name:'齿轮打击',cost:1,type:'attack',damage:12,element:'neutral',desc:'12伤害',icon:'⚙️',common:true},
+  {name:'重击',cost:2,type:'attack',damage:20,element:'neutral',desc:'20伤害',icon:'🔨',common:true},
+  {name:'护盾',cost:1,type:'shield',value:15,element:'neutral',desc:'获得15护盾',icon:'🛡️',common:true},
+  {name:'铁壁',cost:2,type:'shield',value:25,element:'neutral',desc:'获得25护盾',icon:'🏰',common:true},
+  {name:'齿轮加速',cost:1,type:'draw',value:1,element:'neutral',desc:'抽1张牌',icon:'⚙️',common:true},
+  {name:'齿轮修复',cost:2,type:'heal',value:15,element:'neutral',desc:'回复15HP',icon:'🔧',common:true},
+];
+
+const MONSTERS = {
+  spider: {name:'齿轮蜘蛛',icon:'🕷️',hp:30,atk:8,skillName:'蛛网',skillType:'slow',skillChance:0.3,elite:false},
+  beetle: {name:'蒸汽甲虫',icon:'🪲',hp:40,atk:10,skillName:'蒸汽冲击',skillType:'damage',skillValue:15,skillChance:0.25,elite:false},
+  sprite: {name:'电弧精灵',icon:'⚡',hp:25,atk:12,skillName:'电击',skillType:'paralyze',skillChance:0.25,elite:false},
+  mech: {name:'重装机甲',icon:'🤖',hp:120,atk:20,skillName:'导弹齐射',skillType:'damage_multi',skillValue:25,skillHits:2,skillChance:0.35,elite:true},
+  berserker: {name:'链锯狂战士',icon:'👹',hp:100,atk:25,skillName:'血腥撕裂',skillType:'damage',skillValue:30,skillChance:0.3,elite:true},
+  titan: {name:'泰坦魔像',icon:'🗿',hp:300,atk:35,skillName:'泰坦陨落',skillType:'damage_multi',skillValue:50,skillHits:3,skillChance:0.4,elite:false,boss:true},
+};
+
+const STAGES = [
+  {normal:3, elite:0, boss:false},
+  {normal:3, elite:1, boss:false},
+  {normal:2, elite:2, boss:false},
+  {normal:1, elite:3, boss:false},
+  {normal:0, elite:0, boss:true},
+];
+
+// ============================================================
+//  GAME STATE
+// ============================================================
+let G = {};
+
+function initGameState(charId) {
+  const ch = CHARACTERS.find(c => c.id === charId);
+  G = {
+    character: JSON.parse(JSON.stringify(ch)),
+    player: {hp: ch.hp, maxHp: ch.hp, shield: 0, atk: ch.atk, def: ch.def},
+    monsters: [],
+    deck: [],
+    hand: [],
+    discard: [],
+    gears: 3,
+    gearSpentThisTurn: 0,
+    overheated: false,
+    stage: 0,
+    turn: 0,
+    skillCd: 0,
+    comboCount: 0,
+    lastElement: null,
+    sameElementCount: 0,
+    playerBuffs: [],
+    playerDebuffs: [],
+    battleOver: false,
+    selectedCard: null,
+    waitingForTarget: false,
+    targetCallback: null,
+    log: [],
+  };
+  buildDeck();
+}
+
+function buildDeck() {
+  G.deck = [];
+  // Add character cards (2 copies each)
+  G.character.cards.forEach(c => {
+    G.deck.push({...c});
+    G.deck.push({...c});
+  });
+  // Add common cards (2 copies each)
+  COMMON_CARDS.forEach(c => {
+    G.deck.push({...c});
+    G.deck.push({...c});
+  });
+  shuffleArray(G.deck);
+}
+
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+// ============================================================
+//  SCREEN MANAGEMENT
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 'select-screen') renderCharSelect();
+}
+
+// ============================================================
+//  CHARACTER SELECT
+// ============================================================
+let selectedCharId = null;
+
+function renderCharSelect() {
+  selectedCharId = null;
+  document.getElementById('start-battle-btn').disabled = true;
+  const grid = document.getElementById('char-grid');
+  grid.innerHTML = '';
+  CHARACTERS.forEach(ch => {
+    const div = document.createElement('div');
+    div.className = 'char-card';
+    div.dataset.id = ch.id;
+    div.innerHTML = `
+      <div class="char-icon element-${ch.element}">${ch.icon}</div>
+      <div class="char-name">${ch.name}</div>
+      <div class="char-stats">
+        HP: ${ch.hp} | ATK: ${ch.atk} | DEF: ${ch.def}<br>
+        元素: ${ELEMENT_NAMES[ch.element]}
+      </div>
+      <div class="char-skill">
+        技能: ${ch.skillName}<br>${ch.skillDesc}
+      </div>
+    `;
+    div.onclick = () => selectChar(ch.id);
+    grid.appendChild(div);
+  });
+}
+
+function selectChar(id) {
+  selectedCharId = id;
+  document.querySelectorAll('.char-card').forEach(c => {
+    c.classList.toggle('selected', c.dataset.id === id);
+  });
+  document.getElementById('start-battle-btn').disabled = false;
+}
+
+// ============================================================
+//  GAME START
+// ============================================================
+function startGame() {
+  if (!selectedCharId) return;
+  initGameState(selectedCharId);
+  G.stage = 0;
+  showScreen('battle-screen');
+  startStage();
+}
+
+function retryStage() {
+  const ch = CHARACTERS.find(c => c.id === G.character.id);
+  initGameState(G.character.id);
+  G.stage = currentStageIndex;
+  showScreen('battle-screen');
+  startStage();
+}
+
+let currentStageIndex = 0;
+
+function startStage() {
+  currentStageIndex = G.stage;
+  G.monsters = [];
+  G.hand = [];
+  G.discard = [];
+  G.gears = 3;
+  G.gearSpentThisTurn = 0;
+  G.overheated = false;
+  G.turn = 0;
+  G.skillCd = 0;
+  G.comboCount = 0;
+  G.lastElement = null;
+  G.sameElementCount = 0;
+  G.playerBuffs = [];
+  G.playerDebuffs = [];
+  G.battleOver = false;
+  G.selectedCard = null;
+  G.waitingForTarget = false;
+  G.player.hp = G.player.maxHp;
+  G.player.shield = 0;
+  G.log = [];
+
+  buildDeck();
+  spawnMonsters();
+  addLog('info', `第${G.stage+1}关开始！`);
+  startTurn();
+}
+
+function spawnMonsters() {
+  const stageDef = STAGES[G.stage];
+  const normalKeys = ['spider','beetle','sprite'];
+  const eliteKeys = ['mech','berserker'];
+
+  for (let i = 0; i < stageDef.normal; i++) {
+    const key = normalKeys[Math.floor(Math.random() * normalKeys.length)];
+    spawnMonster(key);
+  }
+  for (let i = 0; i < stageDef.elite; i++) {
+    const key = eliteKeys[Math.floor(Math.random() * eliteKeys.length)];
+    spawnMonster(key);
+  }
+  if (stageDef.boss) {
+    spawnMonster('titan');
+  }
+}
+
+function spawnMonster(key) {
+  const def = MONSTERS[key];
+  G.monsters.push({
+    ...JSON.parse(JSON.stringify(def)),
+    id: key + '_' + Date.now() + '_' + Math.random(),
+    currentHp: def.hp,
+    maxHp: def.hp,
+    buffs: [],
+    debuffs: [],
+    alive: true,
+  });
+}
+
+// ============================================================
+//  TURN MANAGEMENT
+// ============================================================
+function startTurn() {
+  if (G.battleOver) return;
+  G.turn++;
+  G.comboCount = 0;
+  G.sameElementCount = 0;
+  G.lastElement = null;
+  G.gearSpentThisTurn = 0;
+
+  // Gear income
+  let gearIncome = 3;
+  if (G.overheated) {
+    gearIncome -= 1;
+    G.overheated = false;
+    addLog('info', '过热！本回合齿轮-1');
+  }
+  G.gears += gearIncome;
+
+  // Reduce skill cooldown
+  if (G.skillCd > 0) G.skillCd--;
+
+  // Process player buffs/debuffs
+  processPlayerEffects();
+
+  // Draw cards to 5
+  drawCards(5 - G.hand.length);
+
+  addLog('info', `--- 回合${G.turn} ---`);
+  addLog('info', `获得${gearIncome}齿轮`);
+
+  renderAll();
+}
+
+function processPlayerEffects() {
+  // Process buffs (reduce duration)
+  G.playerBuffs = G.playerBuffs.filter(b => {
+    b.duration--;
+    return b.duration > 0;
+  });
+  // Process debuffs
+  G.playerDebuffs = G.playerDebuffs.filter(d => {
+    if (d.type === 'burn') {
+      let dmg = 10;
+      applyDamageToPlayer(dmg, '灼烧');
+    } else if (d.type === 'poison') {
+      let dmg = 8;
+      applyDamageToPlayer(dmg, '中毒');
+    }
+    d.duration--;
+    return d.duration > 0;
+  });
+}
+
+function drawCards(n) {
+  for (let i = 0; i < n; i++) {
+    if (G.hand.length >= 8) break;
+    if (G.deck.length === 0) {
+      if (G.discard.length === 0) break;
+      G.deck = [...G.discard];
+      G.discard = [];
+      shuffleArray(G.deck);
+    }
+    G.hand.push(G.deck.pop());
+  }
+}
+
+function endPlayerTurn() {
+  if (G.battleOver) return;
+  // Check overheat
+  if (G.gearSpentThisTurn > 5) {
+    G.overheated = true;
+    addLog('info', '齿轮过热！下回合齿轮-1');
+  }
+  G.selectedCard = null;
+  G.waitingForTarget = false;
+  hideTargetOverlay();
+  monsterTurn();
+}
+
+// ============================================================
+//  CARD PLAY
+// ============================================================
+function selectCard(index) {
+  if (G.battleOver || G.waitingForTarget) return;
+  const card = G.hand[index];
+  if (G.gears < card.cost) return;
+
+  G.selectedCard = index;
+
+  // Determine if we need a target
+  if (card.type === 'attack' || card.type === 'burst' || card.type === 'debuff') {
+    if (card.element === undefined && card.type === 'debuff') {
+      // debuff without element - single target
+    }
+    // Check if it's an AoE skill
+    if (card.type === 'skill' || (card.type === 'debuff' && card.debuff === 'freeze')) {
+      // AoE - no target needed
+      playCard(index, null);
+    } else {
+      // Single target - need selection
+      const alive = G.monsters.filter(m => m.alive);
+      if (alive.length === 1) {
+        playCard(index, alive[0]);
+      } else {
+        showTargetSelection(index);
+      }
+    }
+  } else {
+    playCard(index, null);
+  }
+}
+
+function showTargetSelection(cardIndex) {
+  G.waitingForTarget = true;
+  G.targetCallback = (monster) => {
+    G.waitingForTarget = false;
+    hideTargetOverlay();
+    playCard(cardIndex, monster);
+  };
+  document.getElementById('target-overlay').classList.add('active');
+  renderMonsters();
+}
+
+function hideTargetOverlay() {
+  document.getElementById('target-overlay').classList.remove('active');
+  G.waitingForTarget = false;
+}
+
+function selectTarget(monsterId) {
+  if (!G.waitingForTarget) return;
+  const monster = G.monsters.find(m => m.id === monsterId);
+  if (monster && monster.alive && G.targetCallback) {
+    G.targetCallback(monster);
+  }
+}
+
+function playCard(index, target) {
+  const card = G.hand[index];
+  if (G.gears < card.cost) return;
+
+  // Spend gears
+  G.gears -= card.cost;
+  G.gearSpentThisTurn += card.cost;
+
+  // Remove from hand
+  G.hand.splice(index, 1);
+  G.discard.push(card);
+
+  // Combo system
+  G.comboCount++;
+  const elem = card.element || 'neutral';
+  if (elem === G.lastElement && elem !== 'neutral') {
+    G.sameElementCount++;
+  } else {
+    G.sameElementCount = 1;
+  }
+  G.lastElement = elem;
+
+  // Calculate combo bonus
+  let comboBonus = 0;
+  if (G.comboCount >= 4) {
+    comboBonus += 0.3;
+  }
+  if (G.sameElementCount >= 2) {
+    comboBonus += (G.sameElementCount - 1) * 0.2;
+  }
+
+  if (comboBonus > 0) {
+    showCombo(comboBonus);
+  }
+
+  // Apply card effect
+  switch(card.type) {
+    case 'attack':
+    case 'burst': {
+      let dmg = card.damage || 0;
+      // Apply player buffs
+      dmg = applyPlayerAtkModifiers(dmg);
+      // Combo bonus
+      dmg = Math.floor(dmg * (1 + comboBonus));
+      // Element advantage
+      if (target && card.element && ELEMENT_ADVANTAGE[card.element]) {
+        // Check if target has a weakness - for simplicity, apply advantage based on player element
+        dmg = Math.floor(dmg * 1.5);
+        addLog('skill', '元素克制！伤害x1.5');
+      }
+      // Burst extra damage
+      if (card.type === 'burst') {
+        dmg = Math.floor(dmg * 1.2);
+      }
+      if (target) {
+        dealDamageToMonster(target, dmg, card.element);
+      }
+      break;
+    }
+    case 'shield': {
+      const val = card.value || 0;
+      G.player.shield += val;
+      addLog('shield', `获得${val}护盾`);
+      break;
+    }
+    case 'heal': {
+      const val = card.value || 0;
+      G.player.hp = Math.min(G.player.maxHp, G.player.hp + val);
+      addLog('heal', `回复${val}HP`);
+      break;
+    }
+    case 'buff': {
+      const buffType = card.buff;
+      G.playerBuffs.push({type: buffType, duration: 2});
+      const names = {strengthen:'强化',haste:'加速',dodge:'闪避',crit:'暴击'};
+      addLog('info', `获得${names[buffType]}效果`);
+      break;
+    }
+    case 'debuff': {
+      if (card.type === 'debuff' && card.debuff === 'freeze') {
+        // AoE freeze from frost speaker
+        const alive = G.monsters.filter(m => m.alive);
+        alive.forEach(m => {
+          if (Math.random() < 0.5) {
+            m.debuffs.push({type:'freeze', duration:1});
+            addLog('info', `${m.name}被冻结了！`);
+          }
+        });
+      } else if (target) {
+        const debuffType = card.debuff;
+        let dur = 2;
+        if (debuffType === 'freeze') dur = 1;
+        if (debuffType === 'paralyze') dur = 1;
+        if (debuffType === 'corrode') dur = 3;
+        target.debuffs.push({type: debuffType, duration: dur});
+        const names = {weakness:'虚弱',slow:'减速',freeze:'冻结',paralyze:'麻痹',corrode:'腐蚀'};
+        addLog('info', `${target.name}获得${names[debuffType]}效果`);
+      }
+      break;
+    }
+    case 'skill': {
+      // AoE damage
+      let dmg = card.damage || 0;
+      dmg = applyPlayerAtkModifiers(dmg);
+      dmg = Math.floor(dmg * (1 + comboBonus));
+      const alive = G.monsters.filter(m => m.alive);
+      alive.forEach(m => {
+        dealDamageToMonster(m, dmg, card.element);
+      });
+      break;
+    }
+    case 'draw': {
+      const val = card.value || 1;
+      drawCards(val);
+      addLog('info', `抽了${val}张牌`);
+      break;
+    }
+  }
+
+  G.selectedCard = null;
+  renderAll();
+
+  // Check win
+  checkBattleEnd();
+}
+
+function applyPlayerAtkModifiers(baseDmg) {
+  let dmg = baseDmg;
+  let hasStrengthen = G.playerBuffs.some(b => b.type === 'strengthen');
+  if (hasStrengthen) dmg = Math.floor(dmg * 1.25);
+  let hasWeakness = G.playerDebuffs.some(d => d.type === 'weakness');
+  if (hasWeakness) dmg = Math.floor(dmg * 0.75);
+  // Crit check
+  let hasCrit = G.playerBuffs.some(b => b.type === 'crit');
+  if (hasCrit && Math.random() < 0.5) {
+    dmg = Math.floor(dmg * 1.5);
+    addLog('skill', '暴击！');
+  }
+  return dmg;
+}
+
+function dealDamageToMonster(monster, dmg, element) {
+  if (!monster.alive) return;
+
+  // Check monster dodge (from debuffs, monsters don't dodge by default)
+  // Apply monster debuffs that reduce defense
+  let defReduction = 0;
+  monster.debuffs.forEach(d => {
+    if (d.type === 'corrode') defReduction += 15;
+  });
+  // Monsters don't have DEF stat in this simplified version, but corrode adds bonus damage
+  dmg += defReduction;
+
+  // Check if monster is frozen - extra damage from ice
+  let isFrozen = monster.debuffs.some(d => d.type === 'freeze');
+
+  monster.currentHp -= dmg;
+  addLog('damage', `${monster.name}受到${dmg}点伤害`);
+
+  // Hit animation
+  showDamagePopup(monster.id, dmg, ELEMENT_COLORS[element] || '#ff4444');
+  animateMonsterHit(monster.id);
+
+  if (monster.currentHp <= 0) {
+    monster.currentHp = 0;
+    monster.alive = false;
+    addLog('info', `${monster.name}被击败！`);
+    G.gears += 1;
+    addLog('info', '获得1齿轮');
+  }
+
+  renderMonsters();
+}
+
+function applyDamageToPlayer(dmg, source) {
+  // Check dodge
+  let hasDodge = G.playerBuffs.some(b => b.type === 'dodge');
+  if (hasDodge && Math.random() < 0.3) {
+    addLog('info', '闪避了攻击！');
+    return;
+  }
+
+  // Shield absorbs first
+  if (G.player.shield > 0) {
+    if (G.player.shield >= dmg) {
+      G.player.shield -= dmg;
+      addLog('shield', `护盾吸收了${dmg}点伤害`);
+      renderAll();
+      return;
+    } else {
+      dmg -= G.player.shield;
+      addLog('shield', `护盾吸收了${G.player.shield}点伤害`);
+      G.player.shield = 0;
+    }
+  }
+
+  G.player.hp -= dmg;
+  addLog('damage', `受到${dmg}点${source}伤害`);
+
+  if (G.player.hp <= 0) {
+    G.player.hp = 0;
+    G.battleOver = true;
+  }
+
+  renderAll();
+}
+
+// ============================================================
+//  SKILL
+// ============================================================
+function useSkill() {
+  if (G.battleOver || G.skillCd > 0 || G.waitingForTarget) return;
+  G.skillCd = G.character.skillCd;
+
+  const ch = G.character;
+  addLog('skill', `使用${ch.skillName}！`);
+  showSkillFlash();
+
+  switch(ch.id) {
+    case 'pyromancer': {
+      // 烈焰风暴：全体25伤害+灼烧
+      const alive = G.monsters.filter(m => m.alive);
+      alive.forEach(m => {
+        let dmg = 25;
+        dealDamageToMonster(m, dmg, 'fire');
+        m.debuffs.push({type:'burn', duration:3});
+      });
+      addLog('info', '全体灼烧3回合！');
+      break;
+    }
+    case 'frostspeaker': {
+      // 暴风雪：全体20伤害+50%冻结
+      const alive = G.monsters.filter(m => m.alive);
+      alive.forEach(m => {
+        let dmg = 20;
+        dealDamageToMonster(m, dmg, 'ice');
+        if (Math.random() < 0.5) {
+          m.debuffs.push({type:'freeze', duration:1});
+          addLog('info', `${m.name}被冻结了！`);
+        }
+      });
+      break;
+    }
+    case 'thundercaller': {
+      // 电磁脉冲：全体30伤害+麻痹1回合
+      const alive = G.monsters.filter(m => m.alive);
+      alive.forEach(m => {
+        let dmg = 30;
+        dealDamageToMonster(m, dmg, 'thunder');
+        m.debuffs.push({type:'paralyze', duration:1});
+      });
+      addLog('info', '全体麻痹1回合！');
+      break;
+    }
+    case 'tideguard': {
+      // 生命之海：回复50%HP+40护盾
+      const healAmt = Math.floor(G.player.maxHp * 0.5);
+      G.player.hp = Math.min(G.player.maxHp, G.player.hp + healAmt);
+      G.player.shield += 40;
+      addLog('heal', `回复${healAmt}HP，获得40护盾`);
+      break;
+    }
+    case 'voidprophet': {
+      // 虚空领域：全体腐蚀3回合
+      const alive = G.monsters.filter(m => m.alive);
+      alive.forEach(m => {
+        m.debuffs.push({type:'corrode', duration:3});
+      });
+      addLog('info', '全体腐蚀3回合！');
+      break;
+    }
+  }
+
+  renderAll();
+  checkBattleEnd();
+}
+
+// ============================================================
+//  MONSTER TURN
+// ============================================================
+function monsterTurn() {
+  if (G.battleOver) return;
+  addLog('info', '--- 敌方回合 ---');
+
+  const alive = G.monsters.filter(m => m.alive);
+
+  alive.forEach((m, idx) => {
+    if (G.battleOver) return;
+
+    // Process monster debuffs
+    m.debuffs = m.debuffs.filter(d => {
+      d.duration--;
+      return d.duration > 0;
+    });
+
+    // Check if frozen or paralyzed
+    let isFrozen = m.debuffs.some(d => d.type === 'freeze');
+    let isParalyzed = m.debuffs.some(d => d.type === 'paralyze');
+
+    if (isFrozen) {
+      addLog('info', `${m.name}被冻结，无法行动`);
+      return;
+    }
+    if (isParalyzed) {
+      addLog('info', `${m.name}被麻痹，无法攻击`);
+      return;
+    }
+
+    // Check if slowed
+    let isSlowed = m.debuffs.some(d => d.type === 'slow');
+    if (isSlowed && Math.random() < 0.3) {
+      addLog('info', `${m.name}被减速，跳过攻击`);
+      return;
+    }
+
+    // Decide action
+    let useSkill = Math.random() < (m.skillChance || 0);
+
+    if (useSkill) {
+      // Use skill
+      switch(m.skillType) {
+        case 'slow':
+          addLog('damage', `${m.name}使用${m.skillName}！`);
+          G.playerDebuffs.push({type:'slow', duration:2});
+          addLog('info', '你被减速了！');
+          break;
+        case 'damage':
+          addLog('damage', `${m.name}使用${m.skillName}！造成${m.skillValue}伤害`);
+          applyDamageToPlayer(m.skillValue, m.skillName);
+          break;
+        case 'damage_multi':
+          addLog('damage', `${m.name}使用${m.skillName}！`);
+          for (let h = 0; h < (m.skillHits || 1); h++) {
+            if (G.battleOver) break;
+            applyDamageToPlayer(m.skillValue, m.skillName);
+          }
+          break;
+        case 'paralyze':
+          addLog('damage', `${m.name}使用${m.skillName}！`);
+          G.playerDebuffs.push({type:'paralyze', duration:1});
+          addLog('info', '你被麻痹了！');
+          break;
+      }
+    } else {
+      // Normal attack
+      let atk = m.atk;
+      // Check corrode on monster
+      let corrodeAmount = m.debuffs.filter(d => d.type === 'corrode').length * 15;
+      atk = Math.max(0, atk - corrodeAmount);
+
+      addLog('damage', `${m.name}攻击！造成${atk}伤害`);
+      applyDamageToPlayer(atk, m.name);
+    }
+  });
+
+  // Process monster burn/poison
+  G.monsters.filter(m => m.alive).forEach(m => {
+    m.debuffs = m.debuffs.filter(d => {
+      if (d.type === 'burn') {
+        m.currentHp -= 10;
+        addLog('damage', `${m.name}灼烧受到10伤害`);
+        if (m.currentHp <= 0) {
+          m.currentHp = 0;
+          m.alive = false;
+          addLog('info', `${m.name}被灼烧致死！`);
+          G.gears += 1;
+        }
+      } else if (d.type === 'poison') {
+        m.currentHp -= 8;
+        addLog('damage', `${m.name}中毒受到8伤害`);
+        if (m.currentHp <= 0) {
+          m.currentHp = 0;
+          m.alive = false;
+          addLog('info', `${m.name}中毒致死！`);
+          G.gears += 1;
+        }
+      }
+      d.duration--;
+      return d.duration > 0;
+    });
+  });
+
+  renderAll();
+  checkBattleEnd();
+
+  if (!G.battleOver) {
+    setTimeout(() => startTurn(), 500);
+  }
+}
+
+// ============================================================
+//  BATTLE END
+// ============================================================
+function checkBattleEnd() {
+  if (G.battleOver) {
+    setTimeout(() => {
+      showScreen('defeat-screen');
+    }, 800);
+    return;
+  }
+
+  const allDead = G.monsters.every(m => !m.alive);
+  if (allDead) {
+    G.battleOver = true;
+    setTimeout(() => {
+      if (G.stage >= STAGES.length - 1) {
+        showScreen('clear-screen');
+      } else {
+        document.getElementById('victory-text').textContent = `第${G.stage+1}关通过！准备进入第${G.stage+2}关`;
+        showScreen('victory-screen');
+      }
+    }, 800);
+  }
+}
+
+function nextStage() {
+  G.stage++;
+  showScreen('battle-screen');
+  startStage();
+}
+
+// ============================================================
+//  RENDERING
+// ============================================================
+function renderAll() {
+  renderTopBar();
+  renderMonsters();
+  renderHand();
+  renderActionBar();
+  renderLog();
+}
+
+function renderTopBar() {
+  document.getElementById('stage-info').textContent = `第${G.stage+1}关 / 回合${G.turn}`;
+  document.getElementById('gear-count').textContent = G.gears;
+
+  const hpPct = Math.max(0, (G.player.hp / G.player.maxHp) * 100);
+  const hpBar = document.getElementById('player-hp-bar');
+  hpBar.style.width = hpPct + '%';
+  hpBar.className = 'bar-inner hp' + (hpPct < 30 ? ' low' : '');
+  document.getElementById('player-hp-text').textContent = `${G.player.hp}/${G.player.maxHp}`;
+
+  const shieldPct = Math.min(100, G.player.shield);
+  document.getElementById('player-shield-bar').style.width = shieldPct + '%';
+  document.getElementById('player-shield-text').textContent = G.player.shield;
+}
+
+function renderMonsters() {
+  const area = document.getElementById('monster-area');
+  area.innerHTML = '';
+  G.monsters.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'monster-card' + (!m.alive ? ' dead' : '') + (m.alive && G.waitingForTarget ? ' targetable' : '');
+    div.id = 'monster-' + m.id;
+    if (m.alive && G.waitingForTarget) {
+      div.onclick = () => selectTarget(m.id);
+    }
+
+    const hpPct = Math.max(0, (m.currentHp / m.maxHp) * 100);
+
+    let statusHtml = '';
+    m.debuffs.forEach(d => {
+      const names = {weakness:'虚弱',slow:'减速',burn:'灼烧',poison:'中毒',freeze:'冻结',paralyze:'麻痹',corrode:'腐蚀'};
+      statusHtml += `<span class="status-badge debuff">${names[d.type]||d.type}${d.duration>1?'('+d.duration+')':''}</span>`;
+    });
+    m.buffs.forEach(b => {
+      statusHtml += `<span class="status-badge buff">${b.type}</span>`;
+    });
+
+    const eliteTag = m.elite ? ' [精英]' : '';
+    const bossTag = m.boss ? ' [BOSS]' : '';
+
+    div.innerHTML = `
+      <div class="m-icon">${m.icon}</div>
+      <div class="m-name">${m.name}${eliteTag}${bossTag}</div>
+      <div class="m-hp-bar"><div class="m-hp-fill" style="width:${hpPct}%"></div></div>
+      <div class="m-hp-text">${m.currentHp}/${m.maxHp}</div>
+      <div class="m-status">${statusHtml}</div>
+    `;
+    area.appendChild(div);
+  });
+}
+
+function renderHand() {
+  const container = document.getElementById('hand-cards');
+  container.innerHTML = '';
+  document.getElementById('hand-count').textContent = G.hand.length;
+
+  G.hand.forEach((card, idx) => {
+    const div = document.createElement('div');
+    const canPlay = G.gears >= card.cost && !G.battleOver && !G.waitingForTarget;
+    div.className = 'game-card' + (!canPlay ? ' disabled' : '') + (G.selectedCard === idx ? ' selected' : '');
+
+    const elemClass = card.element || 'neutral';
+    let typeLabel = '';
+    switch(card.type) {
+      case 'attack': typeLabel = '攻击'; break;
+      case 'burst': typeLabel = '爆发'; break;
+      case 'shield': typeLabel = '防御'; break;
+      case 'heal': typeLabel = '治疗'; elemClass = 'heal'; break;
+      case 'buff': typeLabel = '增益'; break;
+      case 'debuff': typeLabel = '减益'; break;
+      case 'skill': typeLabel = '技能'; break;
+      case 'draw': typeLabel = '抽牌'; break;
+    }
+
+    div.innerHTML = `
+      <div class="card-cost">${card.cost}</div>
+      <div class="card-icon">${card.icon}</div>
+      <div class="card-name">${card.name}</div>
+      <div class="card-desc">${card.desc}</div>
+      <div class="card-element ${elemClass}">${typeLabel}${card.element ? ' · '+ELEMENT_NAMES[card.element] : ''}</div>
+    `;
+
+    if (canPlay) {
+      div.onclick = () => selectCard(idx);
+    }
+    container.appendChild(div);
+  });
+}
+
+function renderActionBar() {
+  const skillBtn = document.getElementById('skill-btn');
+  document.getElementById('skill-name').textContent = G.character.skillName;
+  const cdOverlay = document.getElementById('skill-cd');
+
+  if (G.skillCd > 0) {
+    skillBtn.disabled = true;
+    cdOverlay.style.display = 'flex';
+    cdOverlay.textContent = `CD:${G.skillCd}`;
+  } else {
+    skillBtn.disabled = G.battleOver || G.waitingForTarget;
+    cdOverlay.style.display = 'none';
+  }
+
+  document.getElementById('end-turn-btn').disabled = G.battleOver || G.waitingForTarget;
+}
+
+function renderLog() {
+  const logEl = document.getElementById('battle-log');
+  logEl.innerHTML = '';
+  // Show last 50 entries
+  const entries = G.log.slice(-50);
+  entries.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'log-entry log-' + entry.type;
+    div.textContent = entry.text;
+    logEl.appendChild(div);
+  });
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function addLog(type, text) {
+  G.log.push({type, text});
+}
+
+// ============================================================
+//  ANIMATIONS
+// ============================================================
+function showDamagePopup(monsterId, dmg, color) {
+  const monsterEl = document.getElementById('monster-' + monsterId);
+  if (!monsterEl) return;
+  const popup = document.createElement('div');
+  popup.className = 'damage-popup';
+  popup.textContent = '-' + dmg;
+  popup.style.color = color;
+  popup.style.left = '50%';
+  popup.style.top = '20%';
+  popup.style.transform = 'translateX(-50%)';
+  monsterEl.style.position = 'relative';
+  monsterEl.appendChild(popup);
+  setTimeout(() => popup.remove(), 800);
+}
+
+function animateMonsterHit(monsterId) {
+  const el = document.getElementById('monster-' + monsterId);
+  if (!el) return;
+  el.classList.add('hit');
+  setTimeout(() => el.classList.remove('hit'), 300);
+}
+
+function showSkillFlash() {
+  const flash = document.createElement('div');
+  flash.className = 'skill-flash';
+  document.body.appendChild(flash);
+  setTimeout(() => flash.remove(), 500);
+}
+
+function showCombo(bonus) {
+  const div = document.createElement('div');
+  div.className = 'combo-display';
+  div.textContent = `连锁 +${Math.round(bonus*100)}%`;
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 800);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+renderCharSelect();
+</script>
+</body>
+</html>
