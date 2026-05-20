@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Large files (cards are in this category)
+# *.jpg
+# *.png
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
